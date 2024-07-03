@@ -1,3 +1,4 @@
+# Essentially ignoring local R files.
 .Rproj.user
 .Rhistory
 .RData
