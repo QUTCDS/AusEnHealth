@@ -1,0 +1,88 @@
+## ########################################################################## ##
+##         ___               _____         _   _            _ _   _           ##
+##        / _ \             |  ___|       | | | |          | | | | |          ##
+##       / /_\ \_   _ ___   | |__ _ __    | |_| | ___  __ _| | |_| |__        ##
+##       |  _  | | | / __|  |  __| '_ \   |  _  |/ _ \/ _` | | __| '_ \       ##
+##       | | | | |_| \__ \  | |__| | | |  | | | |  __/ (_| | | |_| | | |      ##
+##       \_| |_/\__,_|___/  \____/_| |_|  \_| |_/\___|\__,_|_|\__|_| |_|      ##
+##                                                                            ##
+## ########################################################################## ##
+
+
+
+# Libraries --------------------------------------------------------------------
+library(tidyverse)
+library(sf)
+library(rmapshaper)
+library(corrplot)
+
+
+
+# Load Data --------------------------------------------------------------------
+# Yearly Vulnerability Index, Statistical Areas Level 2, 2011-2019.
+dfYr <- read_csv(paste0("Data (Yearly)/Vulnerability/correlation-weighted-vulnerability-SA2-yearly.csv"),
+               guess_max = 400000,
+               show_col_types = FALSE)
+
+
+
+# Load Shapefiles --------------------------------------------------------------
+# Local Government Area 2016 shape file, quality reduced for faster plotting.
+SA2_SHP_Simple <- read_sf("Data (Yearly)/Region Shapes","SA2_rSHP")
+
+
+
+# Sample Plots -----------------------------------------------------------------
+# Histogram of 2019 Air Quality Vulnerability Index
+df_eg1 <- filter(dfYr, Year == 2019)
+ggplot(df_eg1, aes(x=AQVI)) +
+  geom_histogram(bins = 20, color="black", fill = "lightblue") +
+  theme_bw() +
+  labs(title = "Histogram, 2019 AQVI")
+
+# Histogram of 2019 Air Quality Vulnerability Index Percentiles
+ggplot(df_eg1, aes(x=rAQVI)) +
+  geom_histogram(bins = 20, color="black", fill = "lightblue") +
+  theme_bw() +
+  labs(title = "Histogram, 2019 AQVI Percentiles")
+
+# Choropleth plot of 2015 Cold Vulnerability Index Percentiles
+df_eg2 <- merge(SA2_SHP_Simple, filter(dfYr, Year == 2015))
+ggplot() +
+  theme_void() +
+  geom_sf(data = df_eg2,
+          aes(fill = rCVI),
+          color = NA)
+
+# Choropleth plot of 2017 Heat Vulnerability Index Percentiles in Victoria.
+df_eg3 <- filter(merge(SA2_SHP_Simple, filter(dfYr, Year == 2017)), SA2_MAIN16 > 1e9, SA2_MAIN16 < 2e9)
+ggplot() +
+  theme_void() +
+  geom_sf(data = df_eg3,
+          aes(fill = rHVI),
+          color = NA)
+
+# Line plot showing changes in yearly vulnerability indices over time for Brisbane.
+df_eg4 <- filter(merge(dfYr, SA2_SHP_Simple), SA2_NAME16 == "Brisbane City")
+ggplot(df_eg4, aes(x = Year)) + 
+  geom_line(aes(y = rHVI, colour = "Heat Vulnerability")) +
+  geom_line(aes(y = rCVI, colour = "Cold Vulnerability")) +
+  geom_line(aes(y = rAQVI, colour = "Air Quality Vulnerability")) +
+  theme_bw() +
+  labs(colour = "Index Type") +
+  theme(legend.position = "bottom") +
+  ggtitle("Vulnerability Index Over Time")
+
+# Same plot but this time using "facet_wrap" to separate the lines into different plots but in the same visual.
+df_eg5 <- gather(df_eg4, Index, Value, c("rHVI","rCVI","rAQVI"))
+ggplot(df_eg5, aes(x = as.factor(Year), y = Value, group = Index, colour = Index)) + 
+  geom_line() +
+  facet_wrap(~Index, nrow=3) +
+  theme_bw() +
+  labs(colour = "Index Type") +
+  theme(legend.position = "bottom") +
+  ggtitle("Vulnerability Index Over Time by Index")
+
+
+
+## ########################################################################## ##
